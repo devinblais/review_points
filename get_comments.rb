@@ -21,6 +21,7 @@ gh = Github.new basic_auth: "USERNAME:PASS",
 
 # Date.new(year, month, day)
 start_date = Date.new(2014,9,8)
+end_date = Date.new(2014,9,21)
 page = 1
 done = false
 while !done do
@@ -28,18 +29,24 @@ while !done do
 
   prs.each do |r|
     date = DateTime.parse(r.updated_at)
-    p date
+    merged_date = r.merged_at.nil? ? nil : DateTime.parse(r.merged_at)
+    puts "*"*50
+
     if date < start_date
       done = true
       break;
     end
 
-    next if r.merged_at.nil? || DateTime.parse(r.merged_at) < start_date
+    next if merged_date.nil? || merged_date > end_date || merged_date < start_date
 
-    ship_users = [] 
+    ship_users = []
 
     pr = gh.pull_requests.get number: r.number
     score = pr.additions + pr.deletions
+    if score > 100
+      puts score
+      puts r.number
+    end
 
     comments = gh.issues.comments.list number: r.number
     comments.each do |c|
@@ -53,6 +60,7 @@ while !done do
     elsif ship_users.length == 1
       users[ship_users[0]] ||= 0
       users[ship_users[0]] += score
+      puts "#{ship_users[0]} gets #{score} points"
     else
       puts "Found multiple ships for PR #{r.number}"
       p ship_users
